@@ -1,0 +1,20 @@
+{
+  "name": "sql-lab",
+  "version": "1.0.0",
+  "description": "Local web app for learning SQL and Microsoft SQL Server, with a live T-SQL runner",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mssql": "^12.0.0"
+  },
+  "optionalDependencies": {
+    "msnodesqlv8": "^6.2.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

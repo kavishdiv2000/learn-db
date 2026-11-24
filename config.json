@@ -1,0 +1,12 @@
+{
+  "port": 5080,
+  "server": "localhost",
+  "database": "ShopDB",
+  "auth": "windows",
+  "user": "sa",
+  "password": "",
+  "sqlPort": 1433,
+  "maxRows": 1000,
+  "timeoutSec": 120,
+  "odbcDriver": ""
+}

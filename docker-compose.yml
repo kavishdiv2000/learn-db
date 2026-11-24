@@ -1,0 +1,48 @@
+# SQL Lab + SQL Server 2025 in Docker
+#   Start:  docker compose up -d --build      (or double-click docker-start.bat)
+#   Stop:   docker compose down               (data is kept in the "sqldata" volume)
+#   Reset:  docker compose down -v            (also deletes the databases)
+# Only SQL Server (and run the app with start.bat instead):  docker compose up -d sqlserver
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: sql2025
+    hostname: sql2025
+    platform: linux/amd64            # SQL Server images are x64; Apple Silicon runs them via emulation
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"         # free, full-featured, non-production edition
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Str0ng!Passw0rd}"
+    ports:
+      - "1433:1433"                  # SSMS / VS Code / start.bat connect to localhost,1433
+    volumes:
+      - sqldata:/var/opt/mssql       # databases survive container restarts and rebuilds
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  sqllab:
+    build: .
+    container_name: sqllab
+    depends_on:
+      sqlserver:
+        condition: service_healthy   # wait until SQL Server accepts logins
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "5080"
+      SQL_SERVER: "sqlserver"        # the service name above is the hostname inside Docker
+      SQL_PORT: "1433"
+      SQL_AUTH: "sql"
+      SQL_USER: "sa"
+      SQL_PASSWORD: "${MSSQL_SA_PASSWORD:-Str0ng!Passw0rd}"
+    ports:
+      - "127.0.0.1:5080:5080"        # only reachable from this computer
+    restart: unless-stopped
+
+volumes:
+  sqldata:
