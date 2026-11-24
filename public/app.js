@@ -437,7 +437,7 @@
   // ---------------------------------------------------------------------------
   function renderTable(b) {
     const wrap = el('div', { class: 'tbl-wrap' });
-    const t = el('table', { class: 'prose' });
+    const t = el('table', { class: 'prose' + (b.cls ? ' ' + b.cls : '') });
     if (b.head) t.append(el('thead', {}, el('tr', {}, b.head.map(h => el('th', { html: inline(h) })))));
     const tb = el('tbody');
     (b.rows || []).forEach(r => {
@@ -498,6 +498,58 @@
       }
     }));
     box.append(...btns, explain);
+    return box;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Step-by-step animation: frames stacked in one grid cell, fading between steps.
+  // Elements with class "pop" inside a frame animate each time the frame is shown
+  // (use style="--d:.4s" to delay one element).
+  // ---------------------------------------------------------------------------
+  const animTimers = new Set();
+  function stopAllAnimations() { for (const t of animTimers) clearInterval(t); animTimers.clear(); }
+  function renderAnim(b) {
+    const n = b.frames.length;
+    const box = el('div', { class: 'anim' });
+    const stage = el('div', { class: 'anim-stage' });
+    const frames = b.frames.map(f => el('div', { class: 'anim-frame', html: f.html }));
+    frames.forEach(f => stage.append(f));
+    const caption = el('div', { class: 'anim-caption' });
+    const counter = el('span', { class: 'anim-count' });
+    let idx = 0, timer = null;
+    const show = i => {
+      idx = Math.max(0, Math.min(n - 1, i));
+      frames.forEach((f, j) => { f.classList.toggle('active', j === idx); f.classList.remove('play'); });
+      void frames[idx].offsetWidth;            // restart CSS animations
+      frames[idx].classList.add('play');
+      caption.innerHTML = md(b.frames[idx].caption || '');
+      counter.textContent = `Step ${idx + 1} of ${n}`;
+      dots.forEach((d, j) => d.classList.toggle('on', j === idx));
+      prevBtn.disabled = idx === 0;
+      nextBtn.disabled = idx === n - 1;
+    };
+    const stop = () => {
+      if (timer) { clearInterval(timer); animTimers.delete(timer); timer = null; }
+      playBtn.innerHTML = '&#9654; Play';
+    };
+    const play = () => {
+      if (timer) return stop();
+      if (idx === n - 1) show(0);
+      playBtn.innerHTML = '&#10074;&#10074; Pause';
+      timer = setInterval(() => { if (idx >= n - 1) stop(); else show(idx + 1); }, b.interval || 3200);
+      animTimers.add(timer);
+    };
+    const prevBtn = el('button', { class: 'btn', onclick: () => { stop(); show(idx - 1); } }, '◀ Back');
+    const playBtn = el('button', { class: 'btn btn-primary', onclick: play, html: '&#9654; Play' });
+    const nextBtn = el('button', { class: 'btn', onclick: () => { stop(); show(idx + 1); } }, 'Next ▶');
+    const dots = b.frames.map((_, i) => el('button', { class: 'anim-dot', title: 'Step ' + (i + 1), onclick: () => { stop(); show(i); } }));
+    box.append(
+      el('div', { class: 'anim-head' }, el('span', { class: 'anim-title' }, '🎬 ' + (b.title || 'Animation')), counter),
+      stage,
+      caption,
+      el('div', { class: 'anim-controls' }, prevBtn, playBtn, nextBtn, el('div', { class: 'anim-dots' }, dots))
+    );
+    show(0);
     return box;
   }
 
@@ -654,6 +706,7 @@
       case 'quiz': return renderQuiz(b, lesson.id, idx);
       case 'exercise': return renderExercise(b);
       case 'flash': return renderFlash(b);
+      case 'anim': return renderAnim(b);
       case 'reveal': {
         const d = el('details', { class: 'reveal' }, el('summary', {}, b.label || 'Show answer'));
         const body = el('div', { class: 'reveal-body' });
@@ -758,6 +811,7 @@ ORDER BY s.name, t.name, c.column_id;` }).then(r => {
     const content = $('#content');
     content.innerHTML = '';
     document.body.classList.remove('nav-open');
+    stopAllAnimations();
     snippetSeq = 0;
     if (id === 'playground') {
       content.append(renderPlayground());
