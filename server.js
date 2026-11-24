@@ -106,9 +106,10 @@ async function openConnection() {
 const SHOWPLAN_COL = 'Microsoft SQL Server 2005 XML Showplan';
 
 function splitBatches(text) {
-  // Split on lines that contain only GO (optionally "GO 5" is NOT supported – kept simple)
+  // Split on lines that contain only GO, optionally followed by ; and/or a -- comment
+  // (like SSMS: "GO", "go;", "GO   -- next batch"). "GO 5" (repeat count) is not supported.
   return text
-    .split(/^\s*GO\s*;?\s*$/gim)
+    .split(/^[ \t]*GO[ \t]*;?[ \t]*(?:--[^\n]*)?$/gim)
     .map(s => s.replace(/^\s*\n/, '').replace(/\s+$/, ''))
     .filter(s => s.trim().length > 0);
 }
